@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Command "realpath" is used in this tool. Please install it
+# first if you don't have it installed.
+
+indir=	# input dir
+outfile=	# output file 
+
+while getopts i:o:c: c
+do
+	case ${c} in 
+	i) indir=${OPTARG};;
+	o) outfile=${OPTARG};;
+	c) classind=${OPTARG};;
+	?) # Unknown option
+		echo "list_all_videos -i <in_dir> -o <out_file> -c <class_index>"
+		exit;;
+	esac
+done
+
+> $outfile
+outfile=$(realpath $outfile)
+classind=$(realpath $classind)
+
+cd $indir
+for dir in $(ls -d */)
+do
+	dir=${dir%%/}
+	echo "Processing directory $dir ..."
+
+	label=$(grep -w "$dir" $classind | cut -d" " -f1)
+
+	for v in $(ls $dir/*.avi)
+	do
+		echo "$v $label" >> $outfile
+	done
+done
+
+echo "Done!"

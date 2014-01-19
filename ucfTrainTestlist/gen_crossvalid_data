@@ -1,0 +1,67 @@
+#!/bin/sh
+
+# Generate 25-fold cross-validation training/test lists.
+# Command "realpath" is used in this tool. Please install it
+# first if you don't have it installed.
+
+input=	# input dir
+numstart=1	# Group number for each action to be tested
+numend=7
+classind="classInd.txt"
+allvideos="all_videos.txt"
+
+while getopts i:n:N:c:v: c
+do
+	case ${c} in 
+	i) input=${OPTARG};;
+	n) numstart=${OPTARG};;
+	N) numend=${OPTARG};;
+	c) classind=${OPTARG};;
+	v) allvideos=${OPTARG};;
+	?) # Unknown option
+		echo "gen_crossvalid_data [-i <videos_dir> -c <classInd> -v <all_video_lists>] -n <num_start> -N <num_end>"
+		exit;;
+	esac
+done
+
+if [ -d "$input" ]
+then
+	# List all video clips
+	echo "Listing all the video clips..."
+	./list_all_videos -i $input -o $allvideos -c $classind >/dev/null 2>&1
+fi
+
+if [ ! -s $allvideos ]
+then
+	echo "ERROR: a file containing all the video clips must be specified!"
+	exit 1
+fi
+
+echo "Generating training & test lists by group..."
+trainlist="cv_trainlist_$numstart-$numend.txt"
+testlist="cv_testlist_$numstart-$numend.txt"
+> $trainlist
+> $testlist
+# Put video clips in the specified group number into test list.
+# And move other video clips into training list.
+while read line
+do
+	# Example of a line:
+	#	ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c01.avi 1
+	#
+	groupnum=$(echo $line | cut -d"_" -f3)
+	groupnum=${groupnum##g}
+	if [ "$groupnum" -ge "$numstart" -a "$groupnum" -le "$numend" ]
+	then
+		echo $line >> $testlist
+	else
+		echo $line >> $trainlist
+	fi
+done < $allvideos
+
+# Generate trainning & test files for each action, which will be called by master_test.
+#echo "Generating trainning & test files for each action..."
+#./gen_traintest_lists -i $trainlist -c $classind -r
+#./gen_traintest_lists -i $testlist -c $classind -e
+
+echo "Done!"

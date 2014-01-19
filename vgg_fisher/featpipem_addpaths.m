@@ -1,0 +1,1 @@
+addpath(fullfile(pwd, 'lib/gmm-fisher/matlab'));

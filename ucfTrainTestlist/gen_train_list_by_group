@@ -1,0 +1,49 @@
+#!/bin/sh
+
+# Generate train list by group.
+# Command "realpath" is used in this tool. Please install it
+# first if you don't have it installed.
+
+input=	# input file
+output= # output file
+numstart=1	# Group number for each action to be tested
+numend=7
+
+while getopts i:o:s:e: c
+do
+	case ${c} in 
+	i) input=${OPTARG};;
+	s) numstart=${OPTARG};;
+	e) numend=${OPTARG};;
+	o) output=${OPTARG};;
+	?) # Unknown option
+		echo "gen_train_list_by_group -i <train_list> -o <output_list> -s <num_start> -e <num_end>"
+		exit;;
+	esac
+done
+
+if [ ! -s "$input" ]
+then
+	# List all video clips
+	echo "Error: invalid input list!"
+	exit 1
+fi
+
+echo "Generating training & test lists by group($numstart ~ $numend)..."
+> $output
+# Put video clips in the specified group number into test list.
+# And move other video clips into training list.
+while read line
+do
+	# Example of a line:
+	#	ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c01.avi 1
+	#
+	groupnum=$(echo $line | cut -d"_" -f3)
+	groupnum=${groupnum##g}
+	if [ "$groupnum" -ge "$numstart" -a "$groupnum" -le "$numend" ]
+	then
+		echo $line >> $output
+	fi
+done < $input
+
+echo "Done!"

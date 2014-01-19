@@ -1,0 +1,143 @@
+#!/bin/sh
+
+# Generate training/test/valid lists based on specied clip numbers.
+#
+# Command "realpath" is used in this tool. Please install it
+# first if you don't have it installed.
+#
+
+orig_trainlist="bk_trainlist01.txt"	# Train list
+orig_testlist="bk_testlist01.txt"	# Test list
+orig_classind="bk_classInd.txt"
+
+train_start=1	# Clip number for training
+train_end=8
+valid_start=9	# Clip number for validation
+valid_end=9
+numclass=101	# number of classes for training & test
+
+bygroup="false"	# flag: make lists by group
+
+while getopts r:t:c:s:e:S:E:n:g c
+do
+	case ${c} in 
+	r) orig_trainlist=${OPTARG};;
+	t) orig_testlist=${OPTARG};;
+	c) orig_classind=${OPTARG};;
+	s) valid_start=${OPTARG};;
+	e) valid_end=${OPTARG};;
+	S) train_start=${OPTARG};;
+	E) train_end=${OPTARG};;
+	n) numclass=${OPTARG};;
+	g) bygroup="true";;
+	?) # Unknown option
+		echo "mk_lists [-r <orig_orig_trainlist> -t <orig_orig_testlist> -c <orig_orig_classind>] [-s <validation_start_num> -e <validation_end_num> -S <train_start_num> -E <train_end_num>] [-n <num_class>] [-g]"
+		echo "orig_trainlist is supposed to begin with bk_train or train, while orig_testlist is supposed to begin with bk_test or test."
+		exit;;
+	esac
+done
+
+trainlist=${orig_trainlist##*_}
+trainlist=${trainlist%%.*}
+#train_file="${trainlist}_train.txt"	# Training file 
+train_file="${trainlist}.txt"
+valid_file="${trainlist}_valid.txt"	# Validation file
+test_file="${orig_testlist##*_}"	# Test file for SVM classification(output)
+classind=${orig_classind##*_}trainlist02.txt
+
+if [ ! -s "$orig_trainlist" ]
+then
+	echo "Error: invalid orig_trainlist file."
+	exit 1
+fi
+if [ ! -s "$orig_testlist" ]
+then
+	echo "Error: invalid orig_testlist file."
+	exit 1
+fi
+if [ ! -s "$orig_classind" ]
+then
+	echo "Error: invalid orig_classind file."
+	exit 1
+fi
+
+echo "Modifying class index..."
+> $classind
+while read line
+do
+	# Example of orig_classind
+	#	5 BalanceBeam
+	num=$(echo $line|cut -d" " -f1)
+	if [ "$num" -le "$numclass" ]
+	then
+		echo $line >> $classind
+	fi
+done < $orig_classind
+
+echo "Generating training & validation lists..."
+>$train_file
+#>$valid_file
+while read line
+do
+	action=$(echo $line | cut -d"/" -f1)
+	groupnum=$(echo $line | cut -d"_" -f3)
+	groupnum=${groupnum##*g}
+	clipnum=$(echo $line | cut -d"_" -f4)
+	clipnum=${clipnum%%.avi*}
+	clipnum=${clipnum##c}
+	
+	class_num=$(grep -i -w "$action" $classind | cut -d" " -f1)
+
+	if [ ! -z "$class_num" ]
+	then 
+		if [ "$bygroup" = "false" ]
+		then
+			if [ "$clipnum" -ge "$train_start" -a "$clipnum" -le "$train_end" ]
+			then
+				echo $line >> $train_file
+			fi
+		
+			if [ "$clipnum" -ge "$valid_start" -a "$clipnum" -le "$valid_end" ]
+			then
+				echo $line >> $valid_file
+			fi
+		else
+			if [ "$groupnum" -ge "$train_start" -a "$groupnum" -le "$train_end" ]
+			then
+				echo $line >> $train_file
+			fi
+		
+			if [ "$groupnum" -ge "$valid_start" -a "$groupnum" -le "$valid_end" ]
+			then
+				echo $line >> $valid_file
+			fi
+		fi
+	fi
+
+done < $orig_trainlist
+
+echo "Generating test list..."
+> $test_file
+while read line
+do
+	action=$(echo $line | cut -d"/" -f1)
+	#groupnum=$(echo $line | cut -d"_" -f3)trainlist02.txt
+	#groupnum=${groupnum##*g}
+	#clipnum=$(echo $line | cut -d"_" -f4)
+	#clipnum=${clipnum%%.avi*}
+	#clipnum=${clipnum##c}
+	
+	class_num=$(grep -i -w "$action" $classind | cut -d" " -f1)
+	if [ ! -z "$class_num" ]
+	then
+		line=$(echo $line|tr -d '\r') # remove line break
+		echo "$line $class_num" >> $test_file
+	fi
+done < $orig_testlist
+
+# Generate trainning & test files for each action, which will be called by master_test.
+echo "Generating trainning & test files for each action..."
+./gen_svm_traintest_lists -i $train_file -c $classind -r >/dev/null
+./gen_svm_traintest_lists -i $test_file -c $classind -e >/dev/null
+
+echo "Done!"

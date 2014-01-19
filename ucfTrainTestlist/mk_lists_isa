@@ -1,0 +1,114 @@
+#!/bin/sh
+
+# Generate RICA/slow net & SVM training lists based on specied
+# clip numbers.
+# Command "realpath" is used in this tool. Please install it
+# first if you don't have it installed.
+
+trainlist="bk_trainlist01.txt"	# Train list
+testlist="bk_testlist01.txt"	# Test list
+classind="bk_classInd.txt"
+svmstart=17	# Clip number for SVM training
+svmend=25
+nnstart=8	# Clip number for ISA/RICA training
+nnend=16
+numclass=101	# number of classes for training & test
+
+while getopts r:t:c:s:e:S:E:n: c
+do
+	case ${c} in 
+	r) trainlist=${OPTARG};;
+	t) testlist=${OPTARG};;
+	c) classind=${OPTARG};;
+	s) svmstart=${OPTARG};;
+	e) svmend=${OPTARG};;
+	S) nnstart=${OPTARG};;
+	E) nnend=${OPTARG};;
+	n) numclass=${OPTARG};;
+	?) # Unknown option
+		echo "mk_lists -r <orig_trainlist> -t <orig_testlist> -c <orig_classind> -s <svm_start_num> -e <svm_end_num> -S <nn_start_num> -E <nn_end_num> -n <num_class>"
+		echo "trainlist is supposed to begin with bk_train or train, while testlist is supposed to begin with bk_test or test."
+		exit;;
+	esac
+done
+
+nntrain=${trainlist##*_}	# Training file for ISA/RICA(output)
+svmtrain="svm_$nntrain"	# Training file for SVM(output)
+svmtest=${testlist##*_}	# Test file for SVM classification(output)
+new_classind=${classind##*_}
+
+if [ ! -s "$trainlist" ]
+then
+	# List all video clips
+	echo "Error: invalid trainlist file."
+	exit 1
+fi
+if [ ! -s "$testlist" ]
+then
+	# List all video clips
+	echo "Error: invalid testlist file."
+	exit 1
+fi
+if [ ! -s "$classind" ]
+then
+	# List all video clips
+	echo "Error: invalid trainlist file."
+	exit 1
+fi
+
+echo "Removing legacy train/test files..."
+rm *_train.txt
+rm *_test.txt
+
+echo "Modifying class index..."
+> $new_classind
+while read line
+do
+	# Example of classind
+	#	5 BalanceBeam
+	num=$(echo $line|cut -d" " -f1)
+	if [ "$num" -le "$numclass" ]
+	then
+		echo $line >> $new_classind
+	fi
+done < $classind
+
+echo "Generating temporary train list..."
+tmp_trainlist=".tmp_$trainlist"
+>$tmp_trainlist
+while read line
+do
+	action=${line%%/*}
+	flag=$(cat $new_classind | grep -w $action | cut -d" " -f2)
+	if [ ! -z "$flag" -a $action=$flag ]
+	then 
+		echo $line >> $tmp_trainlist
+	fi
+done < $trainlist
+
+echo "Generating ISA/RICA training list(clips $nnstart ~ $nnend per group)..."
+./gen_train_list_by_group -i $tmp_trainlist -o $nntrain -s $nnstart -e $nnend >/dev/null
+
+echo "Generating SVM training list(clips $svmstart ~ $svmend per group)..."
+./gen_train_list_by_group -i $tmp_trainlist -o $svmtrain -s $svmstart -e $svmend >/dev/null
+
+rm -f $tmp_trainlist
+
+echo "Generating test list..."
+> $svmtest
+while read line
+do
+	action=${line%%/*}
+	flag=$(cat $new_classind | grep -w $action | cut -d" " -f2)
+	if [ ! -z "$flag" -a $action=$flag ]
+	then 
+		echo $line >> $svmtest
+	fi
+done < $testlist
+
+# Generate trainning & test files for each action, which will be called by master_test.
+echo "Generating trainning & test files for each action..."
+./gen_svm_traintest_lists -i $svmtrain -c $new_classind -r >/dev/null
+./gen_svm_traintest_lists -i $svmtest -c $new_classind -e >/dev/null
+
+echo "Done!"

@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Resize videos under a directory.
+# Command "realpath" is used in this tool. Please install it
+# first if you don't have it installed.
+
+input=	# input train/test file
+suffix="_train.txt"
+classind=
+
+while getopts i:rec: c
+do
+	case ${c} in 
+	i) input=${OPTARG};;
+	r) suffix="_train.txt";;
+	e) suffix="_test.txt";;
+	c) classind=${OPTARG};; 
+	?) # Unknown option
+		echo "gen_traintest_list -i <file> -c <classInd> -r[train] -e[test]"
+		exit;;
+	esac
+done
+
+# extract labels from classind
+while read line
+do
+#	lable=$(echo $line|cut -d" " -f1) 
+	action=$(echo $line|cut -d" " -f2|tr -d '\r')
+	file=$action$suffix
+	cp $input $file
+	
+	# Set all video clips to -1
+	perl -i -p -e "s/^(.*\.avi).*/\$1 -1/" $file
+	# Set interesting video clips to 1
+	perl -i -p -e "s/^($action\/v_.*\.avi).*/\$1 1/" $file
+done < $classind
