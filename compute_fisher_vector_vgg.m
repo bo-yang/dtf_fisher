@@ -44,9 +44,14 @@ params.kermap = 'hellinger';
 
 fvt=cell(length(desc)+1,1);
 for i=1:length(desc)
+    feats=desc{i};
+    
+    % Preprocessing: L1 normalization & sqrt
+    feats=feats/norm(feats,1);
+    feats=sqrt(feats);
+    
     % Do PCA on train/test data to half-size original descriptors
     fprintf('Round %d: Performing PCA...\n', i);
-    feats=desc{i};
     params.desc_dim = floor(size(feats,1)/2); % descriptor dimensionality after PCA
     low_proj = princomp(feats');
     low_proj = low_proj(:, 1:params.desc_dim)';
@@ -54,14 +59,10 @@ for i=1:length(desc)
         % dimensionality reduction
         feats = low_proj * feats;
     end
-    %feats=feats-repmat(mean(feats,1),size(feats,1),1);
-    %sigma=feats*feats'/size(feats,2);
-    %[U,~,~]=svd(sigma);
-    %feats=U(:,1:params.desc_dim)'*feats;
     
     % Subsampling features for generaing GMM codebook
-    idx = randperm(size(feats,2),num_subsamp);
-    %idx = floor(linspace(1,size(faets,2),num_subsamp)); 
+    %idx = randperm(size(feats,2),num_subsamp);
+    idx = floor(linspace(1,size(feats,2),num_subsamp)); 
     v = feats(:,idx);   % random set of vectors for GMM estimation
     
     % Create codebook by GMM

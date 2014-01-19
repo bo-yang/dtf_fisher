@@ -4,8 +4,8 @@ run('vlfeat-0.9.17/toolbox/vl_setup')
 
 path=pwd;
 addpath(path);
-%addpath(fullfile(path,'yael'));
-%addpath(fullfile(path,'yael/matlab'));
+addpath(fullfile(path,'yael'));
+addpath(fullfile(path,'yael/matlab'));
 addpath(fullfile(path,'libsvm'));
 addpath(fullfile(path,'libsvm/matlab'));
 addpath(fullfile(path,'vgg_fisher'));
@@ -50,8 +50,8 @@ switch encoding
         num_subsamp=K*2000;
         fvt_train=compute_fisher_vector_vgg( dtf_train, K , num_subsamp ,num_feats_per_video );
         fvt_test=compute_fisher_vector_vgg( dtf_test, K , num_subsamp ,num_feats_per_video );
-        %fvt_train=compute_fisher_vector_vgg( dtf_train, K , num_subsamp ,num_feats_per_video );
-        %fvt_test=compute_fisher_vector_vgg( dtf_test, K , num_subsamp ,num_feats_per_video );
+        %fvt_train=compute_fisher_vector_yael( dtf_train, K , num_subsamp ,num_feats_per_video );
+        %fvt_test=compute_fisher_vector_yael( dtf_test, K , num_subsamp ,num_feats_per_video );
         save(fisher_vectors,'fvt_train','fvt_test','train_label','test_label','-v7.3');
         
         % SVM classification

@@ -29,9 +29,13 @@ for i=1:length(desc)
     desc{i}=removeDC(desc{i});    
     [V,~,~]=pca_mod(desc{i},eps);
     xw=V(1:floor(size(desc{i},1)/2),:)*desc{i};
+    %desc{i}=desc{i}-repmat(mean(desc{i},1),size(desc{i},1),1);
+    %sigma=desc{i}*desc{i}'/size(desc{i},2);
+    %[U,~,~]=svd(sigma);
+    %xw=U(:,1:floor(size(desc{i},1)/2))'*desc{i};
     
-    idx = randperm(size(xw,2),num_subsamp);
-    %idx = floor(linspace(1,size(xw,2),num_subsamp)); 
+    %idx = randperm(size(xw,2),num_subsamp);
+    idx = floor(linspace(1,size(xw,2),num_subsamp)); 
     v = xw(:,idx);   % random set of vectors for GMM estimation
     
     tic
