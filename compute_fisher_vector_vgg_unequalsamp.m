@@ -11,7 +11,7 @@ function [ fvt ] = compute_fisher_vector_vgg( feats, K , num_subsamp ,feat_nums 
 %   Outputs:
 %       fvt - Nx1 dimention cell, collection of Fisher vectors
 
-% To construct Fisher vector, first to estimate the parameters of GMM.
+% To construct Fisher vector, fist to estimate the parameters of GMM.
 % To estimate GMM params, subsampling vectors from DTF descriptors.
 
 redo = 8;                  % number of times the initializing k-means is run (best clustering returned)
@@ -23,24 +23,24 @@ nt = 1;                    % to force multi-threading if not done by Matlab/octa
 
 eps=1e-5;
 
-gmm_params.cluster_count=K;
-gmm_params.maxcomps=gmm_params.cluster_count/4;
-gmm_params.GMM_init= 'kmeans';
+params.cluster_count=K;
+params.maxcomps=params.cluster_count/4;
+params.GMM_init= 'kmeans';
 
 
-gmm_params.pnorm = single(2);    % L2 normalization, 0 to disable
+params.pnorm = single(2);    % L2 normalization, 0 to disable
 fisher_params.alpha = single(0.5);  % power notmalization, 1 to disable
 fisher_params.grad_weights = false; % soft BOW
 fisher_params.grad_means = true;    % 1st order
 fisher_params.grad_variances = true;    % 2nd order
 
-gmm_params.subbin_norm_type = 'l2';
-gmm_params.norm_type = 'l2';
-gmm_params.post_norm_type = 'none';
-gmm_params.pool_type = 'sum';
-gmm_params.quad_divs = 2;
-gmm_params.horiz_divs = 3;
-gmm_params.kermap = 'hellinger';
+params.subbin_norm_type = 'l2';
+params.norm_type = 'l2';
+params.post_norm_type = 'none';
+params.pool_type = 'sum';
+params.quad_divs = 2;
+params.horiz_divs = 3;
+params.kermap = 'hellinger';
 
 fvt=zeros(size(feats,1)*K,numel(feat_nums));
 
@@ -50,15 +50,15 @@ feats=sqrt(feats);
 
 % Do PCA on train/test data to half-size original descriptors
 fprintf('Round %d: Performing PCA...\n', i);
-gmm_params.desc_dim = floor(size(feats,1)/2); % descriptor dimensionality after PCA
+params.desc_dim = floor(size(feats,1)/2); % descriptor dimensionality after PCA
 low_proj = princomp(feats');
-low_proj = low_proj(:, 1:gmm_params.desc_dim)';
+low_proj = low_proj(:, 1:params.desc_dim)';
 if ~isempty(low_proj)
     % dimensionality reduction
     feats = low_proj * feats;
 end
 
-% Subsampling features for generating GMM codebook
+% Subsampling features for generaing GMM codebook
 idx = randperm(size(feats,2),num_subsamp);
 %idx = floor(linspace(1,size(feats,2),num_subsamp));
 v = feats(:,idx);   % random set of vectors for GMM estimation
@@ -66,10 +66,10 @@ v = feats(:,idx);   % random set of vectors for GMM estimation
 % Create codebook by GMM
 fprintf('Round %d: Creating codebook...\n',i);
 tic
-codebook=gmm_gen_codebook(v,gmm_params);
+codebook=gmm_gen_codebook(v,params);
 toc
 
-fprintf('Round %d: Computing fisher vector...\n',i);
+fprintf('Round %d: Computing fish vector...\n',i);
 % Compute Fisher vectors
 start_idx=1;
 for j=1:numel(feat_nums)

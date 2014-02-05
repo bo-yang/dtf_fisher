@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# Extract DTF features for videos.
+# Command "realpath" is used in this tool. Please install it
+# first if you don't have it installed.
+
+indir=	# input dir
+
+while getopts i: c
+do
+	case ${c} in 
+	i) indir=${OPTARG};;
+	?) # Unknown option
+		echo "gzip_dtf_files -i <in_dir>"
+		exit;;
+	esac
+done
+
+cd $indir
+for dir in $(ls -d */)
+do
+	echo "Processing directory $dir ..."
+
+	for v in $(ls $dir/*.dtf)
+	do
+		gzip -f $v 
+	done
+done
+
+echo "Done!"

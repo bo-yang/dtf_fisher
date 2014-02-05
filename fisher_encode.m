@@ -1,31 +1,12 @@
-% Perform Fisher Vector encoding
-function code=fisher_encode(feats,codebook, params, weights)
+function [ fv ] = fisher_encode( feat, pca_coeff, gmm )
+%FISHER_ENCODE compute fisher encoding by trained PCA coefficients and GMM
+%parameters.
 
- % Initialize encoder
- if (nargin < 3) || isempty(params)
-    cpp_handle = mexFisherEncodeHelperSP('init', codebook);
- else
-    cpp_handle = mexFisherEncodeHelperSP('init', codebook, params);
- end
- 
- % Encode
- if (nargin < 4) || isempty(weights)
-     code = mexFisherEncodeHelperSP('encode', cpp_handle, single(feats));
- else
-     code = mexFisherEncodeHelperSP('encode', cpp_handle, single(feats), weights);
- end
+% L1 normalization & Sqare root
+feat=sqrt(feat/norm(feat,1));
 
-  % destructor
-  mexFisherEncodeHelperSP('clear', cpp_handle);
-
-
-%         % get FK dimensionality
-%         function dim = getdim(this)
-%             dim = mexFisherEncodeHelperSP('getdim', this.cpp_handle);
-%         end
-%     end
-%     
-% end
-
+feat=pca_coeff*feat; % Apply PCA
+fv=vl_fisher(double(feat),gmm.means,gmm.covar,gmm.prior,'Improved'); % Calc Fisher vector
 
 end
+
