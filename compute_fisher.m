@@ -46,8 +46,7 @@ fvt = sign(fvt) .* sqrt(abs(fvt));
 % L2 normalization
 fvt = double(yael_fvecs_normalize(single(fvt)));
 
-%fvt(fvt==0) = 123456;
-fvt(find(isnan(fvt))) = 123;
+fvt(find(isnan(fvt))) = 123456;
 
 end
 

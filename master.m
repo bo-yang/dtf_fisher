@@ -1,6 +1,6 @@
 % Script to test DTF features and Fisher Vector
 
-run('vlfeat-0.9.18/toolbox/vl_setup')
+run('vlfeat-0.9.17/toolbox/vl_setup')
 
 path=pwd;
 addpath(path);
@@ -12,7 +12,7 @@ addpath(fullfile(path,'vgg_fisher'));
 addpath(fullfile(path,'vgg_fisher/lib/gmm-fisher/matlab'));
 
 %% Set Parameters
-params.K=128;   % num of GMMs
+params.K=256;   % num of GMMs
 params.DTF_subsample_num=1000; % Subsampling number of DTF features per video clip
 
 params.encoding='fisher'; % encoding type: 'fisher' - fisher vector; 'bow' - bag-of-words
@@ -48,18 +48,12 @@ switch params.encoding
       case 'fisher'        
         %% Construct Fisher Vectors for training
         % Subsample DTF features, calculate PCA coefficients and train GMM model
-        if ~exist(params.fv_train_file,'file') 
-            [ pca_coeff_train, gmm_train, all_train_files, all_train_labels ] = pretrain(params, 'train');
-            save(params.fv_train_file,'pca_coeff_train','gmm_train','all_train_files','all_train_labels','-v7.3');
+        if ~exist(params.fv_train_file,'file') && ~exist(params.fv_test_file,'file')
+            % Train and test share the same codebook?
+            [ pca_coeff, gmm, all_train_files, all_train_labels, all_test_files, all_test_labels ] = pretrain(params);
+            save(params.fv_train_file,'pca_coeff','gmm','all_train_files','all_train_labels','all_test_files', 'all_test_labels', '-v7.3');
         else
             load(params.fv_train_file); 
-        end
-        
-        if ~exist(params.fv_test_file,'file') 
-            [ pca_coeff_test, gmm_test, all_test_files, all_test_labels ] = pretrain(params, 'test');
-            save(params.fv_test_file,'pca_coeff_test','gmm_test','all_test_files','all_test_labels','-v7.3');
-        else
-            load(params.fv_test_file); 
         end
         
         % Load trainning videos, computer Fisher vectors and train SVM model
@@ -67,18 +61,19 @@ switch params.encoding
         uniq_labels=unique(all_train_labels);
         pred=zeros(length(all_test_files),1);
         acc=zeros(numel(uniq_labels),1);
+        %pred=[];
         
         for i=1:numel(uniq_labels)
             % Process training files
             pos_idx=(all_train_labels == i);
             pos_files=all_train_files(pos_idx); % positive training files
-            fvt_pos_train=compute_fisher(params, pca_coeff_train, gmm_train, pos_files);
+            fvt_pos_train=compute_fisher(params, pca_coeff, gmm, pos_files);
             
             neg_idx=(all_train_labels ~= i);
             neg_files=all_train_files(neg_idx);
             sample_idx=randperm(length(neg_files),length(pos_files));
-            sample_neg_files=neg_files(sample_idx);
-            fvt_neg_train=compute_fisher(params, pca_coeff_train, gmm_train, sample_neg_files);
+     http://www.robots.ox.ac.uk/~vgg/software/enceval_toolkit/.       sample_neg_files=neg_files(sample_idx);
+            fvt_neg_train=compute_fisher(params, pca_coeff, gmm, sample_neg_files);
             
             % Train SVM model
             tmp_train_labels=[ones(1,size(fvt_pos_train,2)) -1*ones(1,size(fvt_neg_train,2))];
@@ -87,19 +82,20 @@ switch params.encoding
             % Process test files
             pos_idx=(all_test_labels == i);
             pos_files=all_test_files(pos_idx); % positive training files
-            fvt_pos_test=compute_fisher(params, pca_coeff_test, gmm_test, pos_files);
+            fvt_pos_test=compute_fisher(params, pca_coeff, gmm, pos_files);
             
             neg_idx=(all_test_labels ~= i);
             neg_files=all_test_files(neg_idx);
             sample_idx=randperm(length(neg_files),length(pos_files));
             sample_neg_files=neg_files(sample_idx);
-            fvt_neg_test=compute_fisher(params, pca_coeff_test, gmm_test, sample_neg_files);
+            fvt_neg_test=compute_fisher(params, pca_coeff, gmm, sample_neg_files);
             
             % SVM prediction
             tmp_test_labels=[ones(1,size(fvt_pos_test,2)) -1*ones(1,size(fvt_neg_test,2))];
             [pred_labels,accuracy,prob_estimates] = svmpredict(double(tmp_test_labels)', double([fvt_pos_test fvt_neg_test])', model, '-b 1');
             acc(i) = sum(pred_labels(1:size(fvt_pos_test,2)) == 1) ./ size(fvt_pos_test,2);    %# accuracy
             pred(pos_idx) = (pred_labels(1:size(fvt_pos_test,2))==1)*i;
+            %pred = [pred; (pred_labels(1:size(fvt_pos_test,2))==1)*i];
             
 			save_file=sprintf('fisher_vectors_action%d_sample%d_gmm%d.mat',i,params.DTF_subsample_num,params.K);
 			save(fullfile(path,'data',save_file),'fvt_pos_train','fvt_neg_train', 'fvt_pos_test', 'fvt_neg_test', '-v7.3');

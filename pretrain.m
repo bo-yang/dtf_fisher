@@ -1,4 +1,4 @@
-function [ pca_coeff, gmm, file_list, labels ] = pretrain(params, t_type)
+function [ pca_coeff, gmm, all_train_files, all_train_labels, all_test_files, all_test_labels ] = pretrain(params)
 %PRETRAIN  Subsample DTF features, calculate PCA coefficients and train GMM model
 %   Inputs:
 %       params - structure of parameters
@@ -27,29 +27,28 @@ dtf_feat_num=length(params.feat_list);
 pca_coeff=cell(dtf_feat_num,1); % PCA coeficients
 gmm=cell(dtf_feat_num,1);   % GMM parameters
 
-fprintf('\nPreprocessing features for %s ...\n', t_type);
-
-switch t_type
-	case 'train'
-		feat_sample_file=params.train_sample_data;
-	case 'test'
-		feat_sample_file=params.test_sample_data;
-	otherwise
-		error('Only TRAIN or TEST are valid types!');
-end
+feat_sample_train=params.train_sample_data;
+feat_sample_test=params.test_sample_data;
 
 fprintf('Subsampling DTF features ...\n');
-if ~exist(feat_sample_file,'file')
-	[feats, file_list, labels]=subsample(params,t_type);
-	save(feat_sample_file, 'feats','labels','file_list','-v7.3');
+if ~exist(feat_sample_train,'file')
+    [feats_train, all_train_files, all_train_labels]=subsample(params,'train');
+    save(feat_sample_train, 'feats_train','all_train_labels','all_train_files','-v7.3');
 else
-	load(feat_sample_file);
+    load(feat_sample_train);
+end
+
+if ~exist(feat_sample_test,'file')
+    [feats_test, all_test_files, all_test_labels]=subsample(params,'test');
+    save(feat_sample_test, 'feats_test','all_test_labels','all_test_files','-v7.3');
+else
+    load(feat_sample_test);
 end
 
 for i=1:dtf_feat_num
-	feat=feats{i};
+	feat=[feats_train{i} feats_test{i}];
 	
-	% L1 normalization & Sqare root
+	% L1 normalization & Square root
 	feat=sqrt(feat/norm(feat,1));
 	
 	% Do PCA on train/test data to half-size original descriptors
@@ -63,8 +62,6 @@ for i=1:dtf_feat_num
 	%[gmm{i}.means, gmm{i}.covar, gmm{i}.prior] = vl_gmm(feat, params.K, 'MaxNumIterations', 300);
 	gmm{i}=gmm_gen_codebook(feat,gmm_params);
 end
-
-clear feats
 
 end
 

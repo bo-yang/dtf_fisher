@@ -1,4 +1,4 @@
-run('vlfeat-0.9.18/toolbox/vl_setup')
+run('vlfeat-0.9.17/toolbox/vl_setup')
 
 path=pwd;
 addpath(path);
@@ -38,11 +38,11 @@ pred_results=fullfile(path,'data',sprintf('pred_results_sample%d_gmm%d.mat',para
 
 %% SVM classification
 load(params.fv_train_file);
-load(params.fv_test_file);
+%load(params.fv_test_file);
 uniq_labels=unique(all_train_labels);
 pred=zeros(length(all_test_files),1);
 acc=zeros(numel(uniq_labels),1);
-svm_option='-t 0 -s 0 -q -w0 0.5 -w1 0.5 -c 400 -b 1'; % temporarily not to use linear SVM
+svm_option='-t 0 -s 0 -q -w0 0.5 -w1 0.5 -c 0.1 -b 1'; % temporarily not to use linear SVM
 
 for i=1:numel(uniq_labels)
 	save_file=sprintf('fisher_vectors_action%d_sample%d_gmm%d.mat',i,params.DTF_subsample_num,params.K);
