@@ -39,14 +39,14 @@ else
 end
 
 if ~exist(feat_sample_test,'file')
-    [feats_test, all_test_files, all_test_labels]=subsample(params,'test');
-    save(feat_sample_test, 'feats_test','all_test_labels','all_test_files','-v7.3');
+    [~, all_test_files, all_test_labels]=subsample(params,'test');
+    save(feat_sample_test,'all_test_labels','all_test_files','-v7.3');
 else
     load(feat_sample_test);
 end
 
 for i=1:dtf_feat_num
-	feat=[feats_train{i} feats_test{i}];
+	feat=feats_train{i};
 	
 	% L1 normalization & Square root
 	feat=sqrt(feat/norm(feat,1));
@@ -59,7 +59,6 @@ for i=1:dtf_feat_num
 	feat = pca_coeff{i} * feat;
 
 	fprintf('Training Guassian Mixture Model ...\n');
-	%[gmm{i}.means, gmm{i}.covar, gmm{i}.prior] = vl_gmm(feat, params.K, 'MaxNumIterations', 300);
 	gmm{i}=gmm_gen_codebook(feat,gmm_params);
 end
 
