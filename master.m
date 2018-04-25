@@ -56,7 +56,7 @@ switch params.encoding
             load(params.fv_train_file); 
         end
         
-        % Load trainning videos, computer Fisher vectors and train SVM model
+        % Load trainning videos, compute Fisher vectors and train SVM model
         svm_option='-t 0 -s 0 -q -w0 0.5 -w1 0.5 -c 100 -b 1'; % temporarily not to use linear SVM
         uniq_labels=unique(all_train_labels);
         pred=zeros(length(all_test_files),1);
