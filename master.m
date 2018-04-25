@@ -72,7 +72,7 @@ switch params.encoding
             neg_idx=(all_train_labels ~= i);
             neg_files=all_train_files(neg_idx);
             sample_idx=randperm(length(neg_files),length(pos_files));
-     http://www.robots.ox.ac.uk/~vgg/software/enceval_toolkit/.       sample_neg_files=neg_files(sample_idx);
+            sample_neg_files=neg_files(sample_idx);
             fvt_neg_train=compute_fisher(params, pca_coeff, gmm, sample_neg_files);
             
             % Train SVM model
